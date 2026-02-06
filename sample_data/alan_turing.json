@@ -1,0 +1,39 @@
+{
+  "id": 1,
+  "url": "https://en.wikipedia.org/wiki/Alan_Turing",
+  "title": "Alan Turing",
+  "summary": "Alan Turing was a British mathematician and computer scientist known for his foundational work in theoretical computer science and his codebreaking during World War II.",
+  "key_entities": {
+    "people": ["Alan", "Turing", "Church", "Bletchley", "Cambridge"],
+    "organizations": ["University of Cambridge", "Bletchley Park"],
+    "locations": ["United Kingdom"]
+  },
+  "sections": ["Early life", "World War II", "Legacy"],
+  "quiz": [
+    {
+      "question": "Where did Alan Turing study?",
+      "options": [
+        "Harvard University",
+        "Cambridge University",
+        "Oxford University",
+        "Princeton University"
+      ],
+      "answer": "Cambridge University",
+      "difficulty": "easy",
+      "explanation": "Mentioned in the 'Early life' section."
+    },
+    {
+      "question": "What was Alan Turing’s main contribution during World War II?",
+      "options": [
+        "Atomic research",
+        "Breaking the Enigma code",
+        "Inventing radar",
+        "Developing jet engines"
+      ],
+      "answer": "Breaking the Enigma code",
+      "difficulty": "medium",
+      "explanation": "Detailed in the 'World War II' section."
+    }
+  ],
+  "related_topics": ["Cryptography", "Enigma machine", "Computer science history"]
+}
