@@ -42,8 +42,8 @@ Open http://127.0.0.1:8000 to use the UI.
 See `sample_data/alan_turing.json` for example input/output and structure.
 
 ## Notes on LLM usage
-- Prompt templates for quiz and related topics are defined in `app/llm.py` (`QUIZ_PROMPT`).
-- If `GOOGLE_API_KEY` is set, Gemini (via `langchain-google-genai`) is used. Otherwise, a deterministic fallback generator produces structured quizzes to keep the app functional offline.
+- Prompt template for quiz generation is defined in `app/llm.py` (`QUIZ_PROMPT`).
+- If `GOOGLE_API_KEY` is set, Gemini is called directly via `google-generativeai`. Otherwise, a deterministic fallback generator produces structured quizzes to keep the app functional offline.
 
 ## Frontend
 - Static HTML/JS in `frontend/index.html` served by FastAPI.

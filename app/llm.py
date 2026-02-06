@@ -3,48 +3,33 @@ from __future__ import annotations
 import json
 from typing import Any, Dict, List, Optional
 
-from langchain_core.output_parsers import StrOutputParser
-from langchain_core.prompts import ChatPromptTemplate
-
 from .config import get_settings
 from .scraper import ScrapeResult
 
 settings = get_settings()
 
-QUIZ_PROMPT = ChatPromptTemplate.from_messages(
-    [
-        (
-            "system",
-            "You are a helpful assistant that creates factual quizzes from Wikipedia articles. "
-            "Generate 5-10 multiple-choice questions with four options (A-D), the correct answer, "
-            "a short explanation, and difficulty (easy, medium, hard). Also suggest 5 related Wikipedia topics. "
-            "Return ONLY valid JSON with keys: quiz (list of questions), related_topics (list of strings).",
-        ),
-        (
-            "human",
-            "Article content:\n{article_text}\n\nRespond in JSON.",
-        ),
-    ]
-)
+QUIZ_PROMPT = """
+You are a helpful assistant that creates factual quizzes from Wikipedia articles.
+Generate 5-10 multiple-choice questions with four options (A-D), the correct answer,
+a short explanation, and difficulty (easy, medium, hard). Also suggest 5 related Wikipedia topics.
+Return ONLY valid JSON with keys: quiz (list of questions), related_topics (list of strings).
+
+Article content:
+{article_text}
+"""
 
 
 def _try_llm(article_text: str) -> Optional[Dict[str, Any]]:
-    llm = None
-    if settings.google_api_key:
-        try:
-            from langchain_google_genai import ChatGoogleGenerativeAI
-
-            llm = ChatGoogleGenerativeAI(model="gemini-pro", temperature=0.2, max_output_tokens=1024)
-        except Exception:
-            llm = None
-
-    if llm is None:
+    if not settings.google_api_key:
         return None
-
-    chain = QUIZ_PROMPT | llm | StrOutputParser()
-    output = chain.invoke({"article_text": article_text})
     try:
-        return json.loads(output)
+        import google.generativeai as genai
+
+        genai.configure(api_key=settings.google_api_key)
+        model = genai.GenerativeModel("gemini-pro")
+        response = model.generate_content(QUIZ_PROMPT.format(article_text=article_text))
+        text = response.text or ""
+        return json.loads(text)
     except Exception:
         return None
 
