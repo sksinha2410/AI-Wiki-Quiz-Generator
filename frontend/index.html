@@ -1,0 +1,318 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>AI Wiki Quiz Generator</title>
+    <style>
+      :root {
+        font-family: Arial, sans-serif;
+        color: #1f2937;
+        background: #f4f6f8;
+      }
+      body {
+        margin: 0;
+        padding: 0;
+      }
+      header {
+        background: #111827;
+        color: #fff;
+        padding: 16px 24px;
+      }
+      .container {
+        max-width: 1000px;
+        margin: 20px auto;
+        padding: 0 16px;
+      }
+      .tabs {
+        display: flex;
+        gap: 12px;
+        margin-bottom: 16px;
+      }
+      .tab {
+        padding: 10px 14px;
+        border-radius: 8px;
+        background: #e5e7eb;
+        cursor: pointer;
+        font-weight: 600;
+      }
+      .tab.active {
+        background: #2563eb;
+        color: #fff;
+      }
+      .card {
+        background: #fff;
+        border-radius: 10px;
+        padding: 16px;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+        margin-bottom: 16px;
+      }
+      .input-row {
+        display: flex;
+        gap: 12px;
+        flex-wrap: wrap;
+        align-items: center;
+      }
+      input[type="text"] {
+        flex: 1;
+        padding: 10px;
+        border-radius: 8px;
+        border: 1px solid #d1d5db;
+      }
+      button {
+        padding: 10px 14px;
+        background: #2563eb;
+        color: #fff;
+        border: none;
+        border-radius: 8px;
+        cursor: pointer;
+        font-weight: 600;
+      }
+      button:disabled {
+        background: #9ca3af;
+        cursor: not-allowed;
+      }
+      .grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+        gap: 12px;
+      }
+      .pill {
+        display: inline-block;
+        background: #eef2ff;
+        color: #4338ca;
+        padding: 4px 8px;
+        border-radius: 999px;
+        margin-right: 6px;
+        margin-bottom: 4px;
+        font-size: 12px;
+      }
+      table {
+        width: 100%;
+        border-collapse: collapse;
+      }
+      th,
+      td {
+        text-align: left;
+        padding: 10px 8px;
+        border-bottom: 1px solid #e5e7eb;
+      }
+      .modal {
+        position: fixed;
+        inset: 0;
+        background: rgba(0, 0, 0, 0.4);
+        display: none;
+        align-items: center;
+        justify-content: center;
+        padding: 20px;
+      }
+      .modal.active {
+        display: flex;
+      }
+      .modal-content {
+        background: #fff;
+        padding: 20px;
+        border-radius: 12px;
+        max-width: 900px;
+        width: 100%;
+        max-height: 90vh;
+        overflow-y: auto;
+      }
+      .status {
+        color: #6b7280;
+        margin-top: 8px;
+      }
+    </style>
+  </head>
+  <body>
+    <header>
+      <h2>AI Wiki Quiz Generator</h2>
+    </header>
+    <div class="container">
+      <div class="tabs">
+        <div class="tab active" data-tab="generate">Generate Quiz</div>
+        <div class="tab" data-tab="history">Past Quizzes</div>
+      </div>
+
+      <div id="generate" class="tab-content">
+        <div class="card">
+          <div class="input-row">
+            <input
+              type="text"
+              id="url-input"
+              placeholder="Enter Wikipedia article URL"
+            />
+            <button id="generate-btn">Generate Quiz</button>
+          </div>
+          <div class="status" id="status"></div>
+        </div>
+        <div id="result"></div>
+      </div>
+
+      <div id="history" class="tab-content" style="display: none">
+        <div class="card">
+          <table>
+            <thead>
+              <tr>
+                <th>Title</th>
+                <th>URL</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody id="history-rows"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <div class="modal" id="modal">
+      <div class="modal-content">
+        <div style="display: flex; justify-content: space-between; align-items: center">
+          <h3 id="modal-title">Quiz Details</h3>
+          <button id="close-modal">Close</button>
+        </div>
+        <div id="modal-body"></div>
+      </div>
+    </div>
+
+    <script>
+      const tabs = document.querySelectorAll(".tab");
+      const tabContents = document.querySelectorAll(".tab-content");
+      tabs.forEach((tab) => {
+        tab.addEventListener("click", () => {
+          tabs.forEach((t) => t.classList.remove("active"));
+          tab.classList.add("active");
+          tabContents.forEach((content) => {
+            content.style.display =
+              content.id === tab.dataset.tab ? "block" : "none";
+          });
+          if (tab.dataset.tab === "history") {
+            loadHistory();
+          }
+        });
+      });
+
+      document
+        .getElementById("generate-btn")
+        .addEventListener("click", async () => {
+          const url = document.getElementById("url-input").value.trim();
+          const status = document.getElementById("status");
+          status.textContent = "";
+          if (!url) {
+            status.textContent = "Please enter a URL.";
+            return;
+          }
+          toggleGenerateButton(true);
+          status.textContent = "Generating quiz...";
+          try {
+            const res = await fetch("/api/quiz", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ url }),
+            });
+            if (!res.ok) {
+              const err = await res.json();
+              throw new Error(err.detail || "Failed to generate quiz");
+            }
+            const data = await res.json();
+            renderQuiz(data, document.getElementById("result"));
+            status.textContent = "Quiz generated successfully.";
+          } catch (err) {
+            status.textContent = err.message;
+          } finally {
+            toggleGenerateButton(false);
+          }
+        });
+
+      function toggleGenerateButton(disabled) {
+        const btn = document.getElementById("generate-btn");
+        btn.disabled = disabled;
+        btn.textContent = disabled ? "Working..." : "Generate Quiz";
+      }
+
+      function renderQuiz(data, container) {
+        container.innerHTML = "";
+        const meta = document.createElement("div");
+        meta.className = "card";
+        meta.innerHTML = `
+          <h3>${data.title}</h3>
+          <p><strong>URL:</strong> <a href="${data.url}" target="_blank">${data.url}</a></p>
+          <p>${data.summary || ""}</p>
+          <div><strong>Sections:</strong> ${(data.sections || [])
+            .map((s) => `<span class="pill">${s}</span>`)
+            .join("")}</div>
+          <div style="margin-top: 8px;"><strong>Key entities:</strong> ${(Object.keys(
+            data.key_entities || {}
+          )
+            .map(
+              (k) =>
+                `<span class="pill">${k}: ${(data.key_entities[k] || []).join(
+                  ", "
+                )}</span>`
+            )
+            .join(" "))}</div>
+        `;
+        container.appendChild(meta);
+
+        const quizGrid = document.createElement("div");
+        quizGrid.className = "grid";
+        (data.quiz || []).forEach((q, idx) => {
+          const card = document.createElement("div");
+          card.className = "card";
+          card.innerHTML = `
+            <h4>Q${idx + 1}. ${q.question}</h4>
+            <ul>
+              ${(q.options || [])
+                .map((opt) => `<li>${opt}</li>`)
+                .join("")}
+            </ul>
+            <p><strong>Answer:</strong> ${q.answer}</p>
+            <p><strong>Difficulty:</strong> ${q.difficulty || "n/a"}</p>
+            <p><em>${q.explanation || ""}</em></p>
+          `;
+          quizGrid.appendChild(card);
+        });
+        container.appendChild(quizGrid);
+
+        const related = document.createElement("div");
+        related.className = "card";
+        related.innerHTML = `<h4>Related Topics</h4>${(data.related_topics || [])
+          .map((t) => `<span class="pill">${t}</span>`)
+          .join("")}`;
+        container.appendChild(related);
+      }
+
+      async function loadHistory() {
+        const tbody = document.getElementById("history-rows");
+        tbody.innerHTML = "";
+        const res = await fetch("/api/quizzes");
+        const rows = await res.json();
+        rows.forEach((row) => {
+          const tr = document.createElement("tr");
+          tr.innerHTML = `
+            <td>${row.title}</td>
+            <td><a href="${row.url}" target="_blank">${row.url}</a></td>
+            <td><button data-id="${row.id}">Details</button></td>
+          `;
+          tr.querySelector("button").addEventListener("click", () => {
+            openModal(row.id);
+          });
+          tbody.appendChild(tr);
+        });
+      }
+
+      async function openModal(id) {
+        const res = await fetch(`/api/quizzes/${id}`);
+        const data = await res.json();
+        const body = document.getElementById("modal-body");
+        renderQuiz(data, body);
+        document.getElementById("modal-title").textContent = data.title;
+        document.getElementById("modal").classList.add("active");
+      }
+
+      document.getElementById("close-modal").addEventListener("click", () => {
+        document.getElementById("modal").classList.remove("active");
+      });
+    </script>
+  </body>
+</html>
